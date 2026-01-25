@@ -1,3 +1,5 @@
+mod tetris_model;
+
 use std::{error::Error, io, time::Duration};
 
 use crossterm::{
