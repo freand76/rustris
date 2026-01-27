@@ -15,6 +15,8 @@ use ratatui::{
     Frame, Terminal,
 };
 
+use tetris_model::{create_tetris_game, BlockColor, ControlInterface, PieceDrawer, TetrisState};
+
 #[derive(PartialEq)]
 enum GameState {
     Intro,
@@ -57,12 +59,32 @@ fn intro_state_control(key: KeyEvent) -> GameState {
     };
 }
 
-fn game_state_control(key: KeyEvent) -> GameState {
+fn game_state_control(key: KeyEvent, tetris_state: &mut TetrisState) -> GameState {
     // Input handling
-    return match key.code {
-        KeyCode::Esc => GameState::Intro,
-        _ => GameState::Game,
-    };
+    if key.code == KeyCode::Esc {
+        return GameState::Intro;
+    }
+
+    match key.code {
+        KeyCode::Up => {
+            tetris_state.rotate_cw();
+        }
+        KeyCode::Down => {
+            tetris_state.rotate_ccw();
+        }
+        KeyCode::Left => {
+            tetris_state.move_left();
+        }
+        KeyCode::Right => {
+            tetris_state.move_right();
+        }
+        KeyCode::Char(' ') => {
+            tetris_state.drop();
+        }
+        _ => {}
+    }
+
+    GameState::Game
 }
 
 const WIDTH: usize = 10;
@@ -100,7 +122,20 @@ fn intro_field(f: &mut Frame, area: Rect) {
     f.render_widget(paragraph, area);
 }
 
-fn game_field(f: &mut Frame, area: Rect) {
+fn from_block_color(block_color: BlockColor) -> Color {
+    match block_color {
+        BlockColor::Black => Color::Black,
+        BlockColor::Red => Color::Red,
+        BlockColor::Blue => Color::Blue,
+        BlockColor::Yellow => Color::Yellow,
+        BlockColor::Green => Color::Green,
+        BlockColor::Magenta => Color::Magenta,
+        BlockColor::Cyan => Color::Cyan,
+        BlockColor::Orange => Color::LightRed,
+    }
+}
+
+fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
     let block = Block::default().borders(Borders::ALL).title("Rustris");
 
     //f.render_widget(block, area);
@@ -112,13 +147,16 @@ fn game_field(f: &mut Frame, area: Rect) {
         .block(block);
 
     f.render_widget(paragraph, area);
-    let field = demo_field();
+    let mut field = tetris_state.field.clone();
+    field.draw(&tetris_state.current);
+
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
             let cell_x = area.x + 1 + x as u16;
             let cell_y = area.y + 1 + y as u16;
 
-            let cell = Paragraph::new("█").style(Style::default().fg(field[y][x]));
+            let cell =
+                Paragraph::new("█").style(Style::default().fg(from_block_color(field.data[y][x])));
             f.render_widget(cell, Rect::new(cell_x, cell_y, 1, 1));
         }
     }
@@ -126,6 +164,8 @@ fn game_field(f: &mut Frame, area: Rect) {
 
 fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>> {
     let mut game_state = GameState::Intro;
+
+    let mut tetris_state = create_tetris_game(0);
 
     loop {
         terminal.draw(|f| {
@@ -138,7 +178,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(
 
             match game_state {
                 GameState::Intro => intro_field(f, chunks[0]),
-                GameState::Game => game_field(f, chunks[0]),
+                GameState::Game => game_field(f, chunks[0], &tetris_state),
                 _ => {}
             }
         })?;
@@ -147,7 +187,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(
             if let Event::Key(key) = event::read()? {
                 game_state = match game_state {
                     GameState::Intro => intro_state_control(key),
-                    GameState::Game => game_state_control(key),
+                    GameState::Game => game_state_control(key, &mut tetris_state),
                     _ => game_state,
                 }
             }

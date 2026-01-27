@@ -1,38 +1,39 @@
-const FIELD_WIDTH: usize = 12;
-const FIELD_HEIGHT: usize = 22;
+const FIELD_WIDTH: usize = 10;
+const FIELD_HEIGHT: usize = 20;
 
 const PIECE_SIDE: usize = 4;
 
-enum BlockColor {
+#[derive(Clone, Copy)]
+pub enum BlockColor {
     Black,
     Red,
     Blue,
     Yellow,
     Green,
-    Purple,
-    Turquoise,
+    Magenta,
+    Cyan,
     Orange,
 }
 
-type PieceField = [[u8; PIECE_SIDE]; PIECE_SIDE];
+type PieceGrid = [[u8; PIECE_SIDE]; PIECE_SIDE];
 
 struct TetrisPieceData {
-    piecefield: PieceField,
+    pub data: PieceGrid,
     color: BlockColor,
-    width: u8,
-    heigth: u8,
-    start_diff: u8,
+    width: usize,
+    heigth: usize,
+    start_diff: usize,
 }
 
-const Ipiece: TetrisPieceData = TetrisPieceData {
-    piecefield: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],
+const IPIECE: TetrisPieceData = TetrisPieceData {
+    data: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Red,
     width: 4,
     heigth: 3,
     start_diff: 0,
 };
 
-const TetrisPieces: [TetrisPieceData; 1] = [Ipiece];
+const TETRISPIECES: [TetrisPieceData; 1] = [IPIECE];
 
 enum PieceRotation {
     NORTH,
@@ -41,31 +42,69 @@ enum PieceRotation {
     SOUTH,
 }
 
-struct CurrentPiece {
-    piece: TetrisPieceData,
-    x: u8,
-    y: u8,
+pub struct CurrentPiece {
+    pub piece: TetrisPieceData,
+    x: usize,
+    y: usize,
     rotation: PieceRotation,
 }
 
-type Playfield = [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT];
-
-struct TetrisState {
-    level: u8,
-    field: Playfield,
-    current: CurrentPiece,
+#[derive(Clone, Copy)]
+pub struct Playfield {
+    pub data: [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT],
 }
 
-trait ControlInterface {
-    fn rotatateccw(&mut self);
-    fn rotatatecw(&mut self);
-    fn left(&mut self);
-    fn right(&mut self);
+pub trait PieceDrawer {
+    fn draw(&mut self, piece: &CurrentPiece);
+}
+
+impl PieceDrawer for Playfield {
+    fn draw(&mut self, piece: &CurrentPiece) {
+        for y in 0..PIECE_SIDE {
+            for x in 0..PIECE_SIDE {
+                if piece.piece.data[y][x] == 1 {
+                    self.data[y + piece.y][x + piece.x] = piece.piece.color;
+                }
+            }
+        }
+    }
+}
+
+fn empty_field() -> Playfield {
+    Playfield {
+        data: [[BlockColor::Black; FIELD_WIDTH]; FIELD_HEIGHT],
+    }
+}
+
+pub struct TetrisState {
+    level: u8,
+    pub field: Playfield,
+    pub current: CurrentPiece,
+}
+
+pub fn create_tetris_game(level: u8) -> TetrisState {
+    TetrisState {
+        level: level,
+        field: empty_field(),
+        current: CurrentPiece {
+            piece: IPIECE,
+            x: 5,
+            y: 0,
+            rotation: PieceRotation::NORTH,
+        },
+    }
+}
+
+pub trait ControlInterface {
+    fn rotate_ccw(&mut self);
+    fn rotate_cw(&mut self);
+    fn move_left(&mut self);
+    fn move_right(&mut self);
     fn drop(&mut self);
 }
 
 impl ControlInterface for TetrisState {
-    fn rotatateccw(&mut self) {
+    fn rotate_ccw(&mut self) {
         self.current.rotation = match self.current.rotation {
             PieceRotation::NORTH => PieceRotation::WEST,
             PieceRotation::WEST => PieceRotation::SOUTH,
@@ -73,7 +112,7 @@ impl ControlInterface for TetrisState {
             PieceRotation::EAST => PieceRotation::NORTH,
         };
     }
-    fn rotatatecw(&mut self) {
+    fn rotate_cw(&mut self) {
         self.current.rotation = match self.current.rotation {
             PieceRotation::NORTH => PieceRotation::EAST,
             PieceRotation::EAST => PieceRotation::SOUTH,
@@ -81,10 +120,10 @@ impl ControlInterface for TetrisState {
             PieceRotation::WEST => PieceRotation::NORTH,
         };
     }
-    fn left(&mut self) {
+    fn move_left(&mut self) {
         self.current.x -= 1;
     }
-    fn right(&mut self) {
+    fn move_right(&mut self) {
         self.current.x += 1;
     }
     fn drop(&mut self) {
