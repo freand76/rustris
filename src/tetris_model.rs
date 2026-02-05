@@ -15,10 +15,17 @@ pub enum BlockColor {
     Orange,
 }
 
+enum PieceRotation {
+    NORTH,
+    EAST,
+    WEST,
+    SOUTH,
+}
+
 type PieceGrid = [[u8; PIECE_SIDE]; PIECE_SIDE];
 
 struct TetrisPieceData {
-    pub data: PieceGrid,
+    data: PieceGrid,
     color: BlockColor,
     width: usize,
     heigth: usize,
@@ -35,15 +42,8 @@ const IPIECE: TetrisPieceData = TetrisPieceData {
 
 const TETRISPIECES: [TetrisPieceData; 1] = [IPIECE];
 
-enum PieceRotation {
-    NORTH,
-    EAST,
-    WEST,
-    SOUTH,
-}
-
-pub struct CurrentPiece {
-    pub piece: TetrisPieceData,
+struct CurrentPiece {
+    piece: TetrisPieceData,
     x: usize,
     y: usize,
     rotation: PieceRotation,
@@ -51,15 +51,15 @@ pub struct CurrentPiece {
 
 #[derive(Clone, Copy)]
 pub struct Playfield {
-    pub data: [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT],
+    data: [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT],
 }
 
 impl Playfield {
-    fn draw(&mut self, piece: &CurrentPiece) {
-        for y in 0..PIECE_SIDE {
-            for x in 0..PIECE_SIDE {
-                if piece.piece.data[y][x] == 1 {
-                    self.data[y + piece.y][x + piece.x] = piece.piece.color;
+    fn draw(&mut self, current_piece: &CurrentPiece) {
+        for y in 0..current_piece.piece.heigth {
+            for x in 0..current_piece.piece.width {
+                if current_piece.piece.data[y][x] == 1 {
+                    self.data[y + current_piece.y][x + current_piece.x] = current_piece.piece.color;
                 }
             }
         }
@@ -69,6 +69,9 @@ impl Playfield {
     }
     pub fn height(self) -> usize {
         FIELD_HEIGHT
+    }
+    pub fn get_data(self) -> [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT] {
+       self.data
     }
 }
 
@@ -91,7 +94,7 @@ pub fn create_tetris_game(level: u8) -> TetrisState {
         current: CurrentPiece {
             piece: IPIECE,
             x: 5,
-            y: 0,
+            y: 3,
             rotation: PieceRotation::NORTH,
         },
     }
@@ -127,5 +130,8 @@ impl TetrisState {
         let mut field = self.field.clone();
         field.draw(&self.current);
         return field;
+    }
+    pub fn get_level(&self) -> u8 {
+        return self.level;
     }
 }

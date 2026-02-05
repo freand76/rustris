@@ -127,6 +127,7 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
 
     f.render_widget(paragraph, area);
     let field = tetris_state.get_field();
+    let data = field.get_data();
 
     for y in 0..field.height() {
         for x in 0..field.width() {
@@ -134,10 +135,17 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
             let cell_y = area.y + 1 + y as u16;
 
             let cell =
-                Paragraph::new("█").style(Style::default().fg(from_block_color(field.data[y][x])));
+                Paragraph::new("█").style(Style::default().fg(from_block_color(data[y][x])));
             f.render_widget(cell, Rect::new(cell_x, cell_y, 1, 1));
         }
     }
+
+    let level = tetris_state.get_level();
+    let paragraph = Paragraph::new(format!("{}", level))
+        .style(Style::default().fg(Color::Cyan));
+
+    f.render_widget(paragraph, Rect::new(0, 22, 10, 1));
+
 }
 
 fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>> {
