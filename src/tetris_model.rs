@@ -54,11 +54,7 @@ pub struct Playfield {
     pub data: [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT],
 }
 
-pub trait PieceDrawer {
-    fn draw(&mut self, piece: &CurrentPiece);
-}
-
-impl PieceDrawer for Playfield {
+impl Playfield {
     fn draw(&mut self, piece: &CurrentPiece) {
         for y in 0..PIECE_SIDE {
             for x in 0..PIECE_SIDE {
@@ -67,6 +63,12 @@ impl PieceDrawer for Playfield {
                 }
             }
         }
+    }
+    pub fn width(self) -> usize {
+        FIELD_WIDTH
+    }
+    pub fn height(self) -> usize {
+        FIELD_HEIGHT
     }
 }
 
@@ -78,8 +80,8 @@ fn empty_field() -> Playfield {
 
 pub struct TetrisState {
     level: u8,
-    pub field: Playfield,
-    pub current: CurrentPiece,
+    field: Playfield,
+    current: CurrentPiece,
 }
 
 pub fn create_tetris_game(level: u8) -> TetrisState {
@@ -95,16 +97,8 @@ pub fn create_tetris_game(level: u8) -> TetrisState {
     }
 }
 
-pub trait ControlInterface {
-    fn rotate_ccw(&mut self);
-    fn rotate_cw(&mut self);
-    fn move_left(&mut self);
-    fn move_right(&mut self);
-    fn drop(&mut self);
-}
-
-impl ControlInterface for TetrisState {
-    fn rotate_ccw(&mut self) {
+impl TetrisState {
+    pub fn rotate_ccw(&mut self) {
         self.current.rotation = match self.current.rotation {
             PieceRotation::NORTH => PieceRotation::WEST,
             PieceRotation::WEST => PieceRotation::SOUTH,
@@ -112,7 +106,7 @@ impl ControlInterface for TetrisState {
             PieceRotation::EAST => PieceRotation::NORTH,
         };
     }
-    fn rotate_cw(&mut self) {
+    pub fn rotate_cw(&mut self) {
         self.current.rotation = match self.current.rotation {
             PieceRotation::NORTH => PieceRotation::EAST,
             PieceRotation::EAST => PieceRotation::SOUTH,
@@ -120,13 +114,18 @@ impl ControlInterface for TetrisState {
             PieceRotation::WEST => PieceRotation::NORTH,
         };
     }
-    fn move_left(&mut self) {
+    pub fn move_left(&mut self) {
         self.current.x -= 1;
     }
-    fn move_right(&mut self) {
+    pub fn move_right(&mut self) {
         self.current.x += 1;
     }
-    fn drop(&mut self) {
+    pub fn drop(&mut self) {
         self.current.y += 1;
+    }
+    pub fn get_field(&self) -> Playfield {
+        let mut field = self.field.clone();
+        field.draw(&self.current);
+        return field;
     }
 }

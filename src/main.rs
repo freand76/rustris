@@ -15,7 +15,7 @@ use ratatui::{
     Frame, Terminal,
 };
 
-use tetris_model::{create_tetris_game, BlockColor, ControlInterface, PieceDrawer, TetrisState};
+use tetris_model::{create_tetris_game, BlockColor, TetrisState};
 
 #[derive(PartialEq)]
 enum GameState {
@@ -87,27 +87,6 @@ fn game_state_control(key: KeyEvent, tetris_state: &mut TetrisState) -> GameStat
     GameState::Game
 }
 
-const WIDTH: usize = 10;
-const HEIGHT: usize = 20;
-
-type Playfield = [[Color; WIDTH]; HEIGHT];
-fn empty_field() -> Playfield {
-    [[Color::Blue; WIDTH]; HEIGHT]
-}
-
-fn demo_field() -> Playfield {
-    let mut field = empty_field();
-    field[0][0] = Color::Red;
-    field[0][9] = Color::Red;
-    field[19][0] = Color::Red;
-    field[19][9] = Color::Red;
-    field[19][4] = Color::Cyan;
-    field[19][5] = Color::Cyan;
-    field[18][5] = Color::Cyan;
-    field[18][6] = Color::Cyan;
-    field
-}
-
 fn intro_field(f: &mut Frame, area: Rect) {
     let block = Block::default().borders(Borders::ALL).title("Rustris");
 
@@ -147,11 +126,10 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
         .block(block);
 
     f.render_widget(paragraph, area);
-    let mut field = tetris_state.field.clone();
-    field.draw(&tetris_state.current);
+    let field = tetris_state.get_field();
 
-    for y in 0..HEIGHT {
-        for x in 0..WIDTH {
+    for y in 0..field.height() {
+        for x in 0..field.width() {
             let cell_x = area.x + 1 + x as u16;
             let cell_y = area.y + 1 + y as u16;
 
