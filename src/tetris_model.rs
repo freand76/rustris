@@ -24,23 +24,109 @@ enum PieceRotation {
 
 type PieceGrid = [[u8; PIECE_SIDE]; PIECE_SIDE];
 
+#[derive(Clone, Copy)]
 struct TetrisPieceData {
     data: PieceGrid,
     color: BlockColor,
     width: usize,
-    heigth: usize,
+    height: usize,
     start_diff: usize,
+}
+
+impl TetrisPieceData {
+    fn get_data(self, rotation: &PieceRotation) -> TetrisPieceData {
+        let mut rotated_piece = self.clone();
+
+        rotated_piece.width = match rotation {
+            PieceRotation::NORTH => self.width,
+            PieceRotation::WEST => self.height,
+            PieceRotation::SOUTH => self.width,
+            PieceRotation::EAST => self.height,
+        };
+        rotated_piece.height = match rotation {
+            PieceRotation::NORTH => self.height,
+            PieceRotation::WEST => self.width,
+            PieceRotation::SOUTH => self.height,
+            PieceRotation::EAST => self.width,
+        };
+
+        rotated_piece.data = [[0; PIECE_SIDE]; PIECE_SIDE];
+
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let grid_y = match rotation {
+                    PieceRotation::NORTH => y,
+                    PieceRotation::WEST => x,
+                    PieceRotation::SOUTH => self.height - y - 1,
+                    PieceRotation::EAST => self.width - x - 1,
+                };
+                let grid_x = match rotation {
+                    PieceRotation::NORTH => x,
+                    PieceRotation::WEST => self.height - y - 1,
+                    PieceRotation::SOUTH => self.width - x - 1,
+                    PieceRotation::EAST => y,
+                };
+
+                rotated_piece.data[grid_y][grid_x] = self.data[y][x];
+            }
+        }
+        rotated_piece
+    }
 }
 
 const IPIECE: TetrisPieceData = TetrisPieceData {
     data: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Red,
     width: 4,
-    heigth: 3,
+    height: 3,
+    start_diff: 0,
+};
+const LPIECE: TetrisPieceData = TetrisPieceData {
+    data: [[0, 0, 1, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    color: BlockColor::Yellow,
+    width: 3,
+    height: 2,
+    start_diff: 0,
+};
+const JPIECE: TetrisPieceData = TetrisPieceData {
+    data: [[1, 0, 0, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    color: BlockColor::Orange,
+    width: 3,
+    height: 2,
+    start_diff: 0,
+};
+const OPIECE: TetrisPieceData = TetrisPieceData {
+    data: [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    color: BlockColor::Cyan,
+    width: 2,
+    height: 2,
+    start_diff: 0,
+};
+const SPIECE: TetrisPieceData = TetrisPieceData {
+    data: [[0, 1, 1, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    color: BlockColor::Green,
+    width: 3,
+    height: 2,
+    start_diff: 0,
+};
+const ZPIECE: TetrisPieceData = TetrisPieceData {
+    data: [[1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    color: BlockColor::Magenta,
+    width: 3,
+    height: 2,
+    start_diff: 0,
+};
+const TPIECE: TetrisPieceData = TetrisPieceData {
+    data: [[0, 1, 0, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    color: BlockColor::Blue,
+    width: 3,
+    height: 2,
     start_diff: 0,
 };
 
-const TETRISPIECES: [TetrisPieceData; 1] = [IPIECE];
+const NUM_TETRISPIECES: usize = 7;
+const TETRISPIECES: [TetrisPieceData; NUM_TETRISPIECES] =
+    [IPIECE, LPIECE, JPIECE, OPIECE, SPIECE, ZPIECE, TPIECE];
 
 struct CurrentPiece {
     piece: TetrisPieceData,
@@ -55,11 +141,13 @@ pub struct Playfield {
 }
 
 impl Playfield {
-    fn draw(&mut self, current_piece: &CurrentPiece) {
-        for y in 0..current_piece.piece.heigth {
-            for x in 0..current_piece.piece.width {
-                if current_piece.piece.data[y][x] == 1 {
-                    self.data[y + current_piece.y][x + current_piece.x] = current_piece.piece.color;
+    fn draw(&mut self, current: &CurrentPiece) {
+        let rotated_piece = current.piece.get_data(&current.rotation);
+
+        for y in 0..rotated_piece.height {
+            for x in 0..rotated_piece.width {
+                if rotated_piece.data[y][x] == 1 {
+                    self.data[y + current.y][x + current.x] = current.piece.color;
                 }
             }
         }
@@ -71,7 +159,7 @@ impl Playfield {
         FIELD_HEIGHT
     }
     pub fn get_data(self) -> [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT] {
-       self.data
+        self.data
     }
 }
 
@@ -88,11 +176,13 @@ pub struct TetrisState {
 }
 
 pub fn create_tetris_game(level: u8) -> TetrisState {
+    let rand_val: usize = (rand::random::<u8>() as usize) % NUM_TETRISPIECES;
+
     TetrisState {
         level: level,
         field: empty_field(),
         current: CurrentPiece {
-            piece: IPIECE,
+            piece: TETRISPIECES[rand_val],
             x: 5,
             y: 3,
             rotation: PieceRotation::NORTH,
