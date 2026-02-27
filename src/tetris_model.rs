@@ -156,6 +156,66 @@ impl Playfield {
             }
         }
     }
+    fn test_row(&self, row: usize) -> bool {
+        for x in 0..self.width() {
+            if self.data[row][x] == BlockColor::Black {
+                return false;
+            }
+        }
+        true
+    }
+    fn remove_row(&mut self, row: usize) {
+        if row == 0 {
+            self.data[row] = [BlockColor::Black; FIELD_WIDTH];
+        } else {
+            for y in (0..row).rev() {
+                self.data[y + 1] = self.data[y];
+            }
+        }
+    }
+    fn test_and_remove_rows(&mut self) {
+        for row in 0..self.height() {
+            if self.test_row(row) {
+                self.remove_row(row);
+            }
+        }
+    }
+    fn place(&mut self, piece: CurrentPiece) {
+        let rotated_piece = piece.piece.get_data(&piece.rotation);
+        for y in 0..rotated_piece.height {
+            for x in 0..rotated_piece.width {
+                if rotated_piece.data[y][x] == 1 {
+                    let grid_x = x as i8 + piece.x;
+                    let grid_y = y as i8 + piece.y;
+                    self.data[grid_y as usize][grid_x as usize] = rotated_piece.color;
+                }
+            }
+        }
+        self.test_and_remove_rows()
+    }
+    fn try_piece(&self, piece: CurrentPiece) -> bool {
+        let rotated_piece = piece.piece.get_data(&piece.rotation);
+
+        for y in 0..rotated_piece.height {
+            for x in 0..rotated_piece.width {
+                if rotated_piece.data[y][x] == 1 {
+                    let grid_x = x as i8 + piece.x;
+                    let grid_y = y as i8 + piece.y;
+                    if grid_x < 0 || grid_x >= self.width() as i8 {
+                        return false;
+                    }
+                    if grid_y < 0 || grid_y >= self.height() as i8 {
+                        return false;
+                    }
+                    if self.data[grid_y as usize][grid_x as usize] != BlockColor::Black {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
+    }
     pub fn width(self) -> usize {
         FIELD_WIDTH
     }
@@ -205,42 +265,7 @@ impl TetrisState {
             y: piece.y_start,
             rotation: PieceRotation::NORTH,
         };
-        self.game_over = !self.try_piece(self.current);
-    }
-    fn try_piece(&self, piece: CurrentPiece) -> bool {
-        let rotated_piece = piece.piece.get_data(&piece.rotation);
-
-        for y in 0..rotated_piece.height {
-            for x in 0..rotated_piece.width {
-                if rotated_piece.data[y][x] == 1 {
-                    let grid_x = x as i8 + piece.x;
-                    let grid_y = y as i8 + piece.y;
-                    if grid_x < 0 || grid_x >= self.field.width() as i8 {
-                        return false;
-                    }
-                    if grid_y < 0 || grid_y >= self.field.height() as i8 {
-                        return false;
-                    }
-                    if self.field.data[grid_y as usize][grid_x as usize] != BlockColor::Black {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        true
-    }
-    fn place(&mut self, piece: CurrentPiece) {
-        let rotated_piece = piece.piece.get_data(&piece.rotation);
-        for y in 0..rotated_piece.height {
-            for x in 0..rotated_piece.width {
-                if rotated_piece.data[y][x] == 1 {
-                    let grid_x = x as i8 + piece.x;
-                    let grid_y = y as i8 + piece.y;
-                    self.field.data[grid_y as usize][grid_x as usize] = rotated_piece.color;
-                }
-            }
-        }
+        self.game_over = !self.field.try_piece(self.current);
     }
     pub fn rotate_ccw(&mut self) {
         let mut piece = self.current.clone();
@@ -250,7 +275,7 @@ impl TetrisState {
             PieceRotation::SOUTH => PieceRotation::EAST,
             PieceRotation::EAST => PieceRotation::NORTH,
         };
-        if self.try_piece(piece) {
+        if self.field.try_piece(piece) {
             self.current = piece;
         }
     }
@@ -262,44 +287,42 @@ impl TetrisState {
             PieceRotation::SOUTH => PieceRotation::WEST,
             PieceRotation::WEST => PieceRotation::NORTH,
         };
-        if self.try_piece(piece) {
+        if self.field.try_piece(piece) {
             self.current = piece;
         }
     }
     pub fn move_left(&mut self) {
         let mut piece = self.current.clone();
         piece.x -= 1;
-        if self.try_piece(piece) {
+        if self.field.try_piece(piece) {
             self.current = piece;
         }
     }
     pub fn move_right(&mut self) {
         let mut piece = self.current.clone();
         piece.x += 1;
-        if self.try_piece(piece) {
+        if self.field.try_piece(piece) {
             self.current = piece;
         }
     }
     fn drop_one_line(&mut self) -> bool {
         let mut piece = self.current.clone();
         piece.y += 1;
-        if self.try_piece(piece) {
+        if self.field.try_piece(piece) {
             self.current = piece;
             return true;
         }
         false
     }
     pub fn tick(&mut self) {
-        if !self.game_over {
-            if !self.drop_one_line() {
-                self.place(self.current);
-                self.new_piece();
-            }
+        if !self.drop_one_line() {
+            self.field.place(self.current);
+            self.new_piece();
         }
     }
     pub fn drop(&mut self) {
         while self.drop_one_line() {}
-        self.place(self.current);
+        self.field.place(self.current);
         self.new_piece();
     }
     pub fn get_field(&self) -> Playfield {
