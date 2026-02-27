@@ -15,7 +15,7 @@ use ratatui::{
     Frame, Terminal,
 };
 
-use tetris_model::{create_tetris_game, BlockColor, TetrisState};
+use tetris_model::{BlockColor, TetrisState};
 
 #[derive(PartialEq)]
 enum GameState {
@@ -149,7 +149,7 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
 fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>> {
     let mut game_state = GameState::Intro;
 
-    let mut tetris_state = create_tetris_game(0);
+    let mut tetris_state = TetrisState::new(0);
 
     loop {
         terminal.draw(|f| {

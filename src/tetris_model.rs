@@ -85,14 +85,14 @@ const LPIECE: TetrisPieceData = TetrisPieceData {
     data: [[0, 0, 1, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Yellow,
     width: 3,
-    height: 2,
+    height: 3,
     start_diff: 0,
 };
 const JPIECE: TetrisPieceData = TetrisPieceData {
     data: [[1, 0, 0, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Orange,
     width: 3,
-    height: 2,
+    height: 3,
     start_diff: 0,
 };
 const OPIECE: TetrisPieceData = TetrisPieceData {
@@ -120,7 +120,7 @@ const TPIECE: TetrisPieceData = TetrisPieceData {
     data: [[0, 1, 0, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Blue,
     width: 3,
-    height: 2,
+    height: 3,
     start_diff: 0,
 };
 
@@ -175,22 +175,30 @@ pub struct TetrisState {
     current: CurrentPiece,
 }
 
-pub fn create_tetris_game(level: u8) -> TetrisState {
-    let rand_val: usize = (rand::random::<u8>() as usize) % NUM_TETRISPIECES;
-
-    TetrisState {
-        level: level,
-        field: empty_field(),
-        current: CurrentPiece {
+impl TetrisState {
+    pub fn new(level: u8) -> TetrisState {
+        let mut state = TetrisState {
+            level: level,
+            field: empty_field(),
+            current: CurrentPiece {
+                piece: IPIECE,
+                x: 0,
+                y: 0,
+                rotation: PieceRotation::NORTH,
+            },
+        };
+        state.new_piece();
+        state
+    }
+    fn new_piece(&mut self) {
+        let rand_val: usize = (rand::random::<u8>() as usize) % NUM_TETRISPIECES;
+        self.current = CurrentPiece {
             piece: TETRISPIECES[rand_val],
             x: 5,
             y: 3,
             rotation: PieceRotation::NORTH,
-        },
+        }
     }
-}
-
-impl TetrisState {
     pub fn rotate_ccw(&mut self) {
         self.current.rotation = match self.current.rotation {
             PieceRotation::NORTH => PieceRotation::WEST,
@@ -214,7 +222,7 @@ impl TetrisState {
         self.current.x += 1;
     }
     pub fn drop(&mut self) {
-        self.current.y += 1;
+        self.new_piece();
     }
     pub fn get_field(&self) -> Playfield {
         let mut field = self.field.clone();
