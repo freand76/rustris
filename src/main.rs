@@ -131,11 +131,12 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
 
     for y in 0..field.height() {
         for x in 0..field.width() {
-            let cell_x = area.x + 1 + x as u16;
+            let cell_x = area.x + 1 + 2 * x as u16;
             let cell_y = area.y + 1 + y as u16;
 
-            let cell = Paragraph::new("█").style(Style::default().fg(from_block_color(data[y][x])));
-            f.render_widget(cell, Rect::new(cell_x, cell_y, 1, 1));
+            let cell =
+                Paragraph::new("██").style(Style::default().fg(from_block_color(data[y][x])));
+            f.render_widget(cell, Rect::new(cell_x, cell_y, 2, 1));
         }
     }
 
