@@ -3,7 +3,7 @@ const FIELD_HEIGHT: usize = 20;
 
 const PIECE_SIDE: usize = 4;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum BlockColor {
     Black,
     Red,
@@ -15,6 +15,7 @@ pub enum BlockColor {
     Orange,
 }
 
+#[derive(Clone, Copy)]
 enum PieceRotation {
     NORTH,
     EAST,
@@ -30,7 +31,7 @@ struct TetrisPieceData {
     color: BlockColor,
     width: usize,
     height: usize,
-    start_diff: usize,
+    start_diff: i8,
 }
 
 impl TetrisPieceData {
@@ -55,16 +56,16 @@ impl TetrisPieceData {
         for y in 0..self.height {
             for x in 0..self.width {
                 let grid_y = match rotation {
-                    PieceRotation::NORTH => y,
-                    PieceRotation::WEST => x,
-                    PieceRotation::SOUTH => self.height - y - 1,
-                    PieceRotation::EAST => self.width - x - 1,
+                    PieceRotation::NORTH => y as usize,
+                    PieceRotation::WEST => x as usize,
+                    PieceRotation::SOUTH => (self.height - y - 1) as usize,
+                    PieceRotation::EAST => (self.width - x - 1) as usize,
                 };
                 let grid_x = match rotation {
-                    PieceRotation::NORTH => x,
-                    PieceRotation::WEST => self.height - y - 1,
-                    PieceRotation::SOUTH => self.width - x - 1,
-                    PieceRotation::EAST => y,
+                    PieceRotation::NORTH => x as usize,
+                    PieceRotation::WEST => (self.height - y - 1) as usize,
+                    PieceRotation::SOUTH => (self.width - x - 1) as usize,
+                    PieceRotation::EAST => y as usize,
                 };
 
                 rotated_piece.data[grid_y][grid_x] = self.data[y][x];
@@ -128,10 +129,11 @@ const NUM_TETRISPIECES: usize = 7;
 const TETRISPIECES: [TetrisPieceData; NUM_TETRISPIECES] =
     [IPIECE, LPIECE, JPIECE, OPIECE, SPIECE, ZPIECE, TPIECE];
 
+#[derive(Clone, Copy)]
 struct CurrentPiece {
     piece: TetrisPieceData,
-    x: usize,
-    y: usize,
+    x: i8,
+    y: i8,
     rotation: PieceRotation,
 }
 
@@ -147,7 +149,9 @@ impl Playfield {
         for y in 0..rotated_piece.height {
             for x in 0..rotated_piece.width {
                 if rotated_piece.data[y][x] == 1 {
-                    self.data[y + current.y][x + current.x] = current.piece.color;
+                    let grid_x = x as i8 + current.x;
+                    let grid_y = y as i8 + current.y;
+                    self.data[grid_y as usize][grid_x as usize] = current.piece.color;
                 }
             }
         }
@@ -194,32 +198,68 @@ impl TetrisState {
         let rand_val: usize = (rand::random::<u8>() as usize) % NUM_TETRISPIECES;
         self.current = CurrentPiece {
             piece: TETRISPIECES[rand_val],
-            x: 5,
+            x: 0,
             y: 3,
             rotation: PieceRotation::NORTH,
         }
     }
+    fn try_piece(&self, piece: CurrentPiece) -> bool {
+        let rotated_piece = piece.piece.get_data(&piece.rotation);
+
+        for y in 0..rotated_piece.height {
+            for x in 0..rotated_piece.width {
+                if rotated_piece.data[y][x] == 1 {
+                    let grid_x = x as i8 + piece.x;
+                    let grid_y = y as i8 + piece.y;
+                    if grid_x < 0 || grid_x >= self.field.width() as i8 {
+                        return false;
+                    }
+                    if self.field.data[grid_y as usize][grid_x as usize] != BlockColor::Black {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
+    }
     pub fn rotate_ccw(&mut self) {
-        self.current.rotation = match self.current.rotation {
+        let mut piece = self.current.clone();
+        piece.rotation = match self.current.rotation {
             PieceRotation::NORTH => PieceRotation::WEST,
             PieceRotation::WEST => PieceRotation::SOUTH,
             PieceRotation::SOUTH => PieceRotation::EAST,
             PieceRotation::EAST => PieceRotation::NORTH,
         };
+        if self.try_piece(piece) {
+            self.current = piece;
+        }
     }
     pub fn rotate_cw(&mut self) {
-        self.current.rotation = match self.current.rotation {
+        let mut piece = self.current.clone();
+        piece.rotation = match self.current.rotation {
             PieceRotation::NORTH => PieceRotation::EAST,
             PieceRotation::EAST => PieceRotation::SOUTH,
             PieceRotation::SOUTH => PieceRotation::WEST,
             PieceRotation::WEST => PieceRotation::NORTH,
         };
+        if self.try_piece(piece) {
+            self.current = piece;
+        }
     }
     pub fn move_left(&mut self) {
-        self.current.x -= 1;
+        let mut piece = self.current.clone();
+        piece.x -= 1;
+        if self.try_piece(piece) {
+            self.current = piece;
+        }
     }
     pub fn move_right(&mut self) {
-        self.current.x += 1;
+        let mut piece = self.current.clone();
+        piece.x += 1;
+        if self.try_piece(piece) {
+            self.current = piece;
+        }
     }
     pub fn drop(&mut self) {
         self.new_piece();
