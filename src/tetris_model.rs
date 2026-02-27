@@ -130,8 +130,8 @@ const TETRISPIECES: [TetrisPieceData; NUM_TETRISPIECES] =
     [IPIECE, LPIECE, JPIECE, OPIECE, SPIECE, ZPIECE, TPIECE];
 
 #[derive(Clone, Copy)]
-struct CurrentPiece {
-    piece: TetrisPieceData,
+struct CurrentPiece<'a> {
+    piece: &'a TetrisPieceData,
     x: i8,
     y: i8,
     rotation: PieceRotation,
@@ -236,7 +236,7 @@ fn empty_field() -> Playfield {
 pub struct TetrisState {
     level: u8,
     field: Playfield,
-    current: CurrentPiece,
+    current: CurrentPiece<'static>,
     game_over: bool,
 }
 
@@ -246,7 +246,7 @@ impl TetrisState {
             level: level,
             field: empty_field(),
             current: CurrentPiece {
-                piece: IPIECE,
+                piece: &IPIECE,
                 x: 0,
                 y: 0,
                 rotation: PieceRotation::NORTH,
@@ -258,7 +258,7 @@ impl TetrisState {
     }
     fn new_piece(&mut self) {
         let rand_val: usize = (rand::random::<u8>() as usize) % NUM_TETRISPIECES;
-        let piece = TETRISPIECES[rand_val];
+        let piece = &TETRISPIECES[rand_val];
         self.current = CurrentPiece {
             piece: piece,
             x: ((FIELD_WIDTH - piece.width) / 2) as i8,
