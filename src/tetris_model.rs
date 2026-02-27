@@ -177,6 +177,7 @@ pub struct TetrisState {
     level: u8,
     field: Playfield,
     current: CurrentPiece,
+    game_over: bool,
 }
 
 impl TetrisState {
@@ -190,6 +191,7 @@ impl TetrisState {
                 y: 0,
                 rotation: PieceRotation::NORTH,
             },
+            game_over: false,
         };
         state.new_piece();
         state
@@ -202,7 +204,8 @@ impl TetrisState {
             x: ((FIELD_WIDTH - piece.width) / 2) as i8,
             y: piece.y_start,
             rotation: PieceRotation::NORTH,
-        }
+        };
+        self.game_over = !self.try_piece(self.current);
     }
     fn try_piece(&self, piece: CurrentPiece) -> bool {
         let rotated_piece = piece.piece.get_data(&piece.rotation);
@@ -215,6 +218,9 @@ impl TetrisState {
                     if grid_x < 0 || grid_x >= self.field.width() as i8 {
                         return false;
                     }
+                    if grid_y < 0 || grid_y >= self.field.height() as i8 {
+                        return false;
+                    }
                     if self.field.data[grid_y as usize][grid_x as usize] != BlockColor::Black {
                         return false;
                     }
@@ -223,6 +229,18 @@ impl TetrisState {
         }
 
         true
+    }
+    fn place(&mut self, piece: CurrentPiece) {
+        let rotated_piece = piece.piece.get_data(&piece.rotation);
+        for y in 0..rotated_piece.height {
+            for x in 0..rotated_piece.width {
+                if rotated_piece.data[y][x] == 1 {
+                    let grid_x = x as i8 + piece.x;
+                    let grid_y = y as i8 + piece.y;
+                    self.field.data[grid_y as usize][grid_x as usize] = rotated_piece.color;
+                }
+            }
+        }
     }
     pub fn rotate_ccw(&mut self) {
         let mut piece = self.current.clone();
@@ -263,6 +281,16 @@ impl TetrisState {
         }
     }
     pub fn drop(&mut self) {
+        let mut piece = self.current.clone();
+        loop {
+            if self.try_piece(piece) {
+                piece.y += 1;
+            } else {
+                piece.y -= 1;
+                self.place(piece);
+                break;
+            }
+        }
         self.new_piece();
     }
     pub fn get_field(&self) -> Playfield {
@@ -272,5 +300,8 @@ impl TetrisState {
     }
     pub fn get_level(&self) -> u8 {
         return self.level;
+    }
+    pub fn is_game_over(&self) -> bool {
+        return self.game_over;
     }
 }

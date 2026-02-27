@@ -84,6 +84,9 @@ fn game_state_control(key: KeyEvent, tetris_state: &mut TetrisState) -> GameStat
         _ => {}
     }
 
+    if tetris_state.is_game_over() {
+        return GameState::Intro;
+    }
     GameState::Game
 }
 
