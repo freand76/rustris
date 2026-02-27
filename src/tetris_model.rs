@@ -31,7 +31,7 @@ struct TetrisPieceData {
     color: BlockColor,
     width: usize,
     height: usize,
-    start_diff: i8,
+    y_start: i8,
 }
 
 impl TetrisPieceData {
@@ -80,49 +80,49 @@ const IPIECE: TetrisPieceData = TetrisPieceData {
     color: BlockColor::Red,
     width: 4,
     height: 3,
-    start_diff: 0,
+    y_start: -1,
 };
 const LPIECE: TetrisPieceData = TetrisPieceData {
     data: [[0, 0, 1, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Yellow,
     width: 3,
     height: 3,
-    start_diff: 0,
+    y_start: 0,
 };
 const JPIECE: TetrisPieceData = TetrisPieceData {
     data: [[1, 0, 0, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Orange,
     width: 3,
     height: 3,
-    start_diff: 0,
+    y_start: 0,
 };
 const OPIECE: TetrisPieceData = TetrisPieceData {
     data: [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Cyan,
     width: 2,
     height: 2,
-    start_diff: 0,
+    y_start: 0,
 };
 const SPIECE: TetrisPieceData = TetrisPieceData {
     data: [[0, 1, 1, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Green,
     width: 3,
     height: 2,
-    start_diff: 0,
+    y_start: 0,
 };
 const ZPIECE: TetrisPieceData = TetrisPieceData {
     data: [[1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Magenta,
     width: 3,
     height: 2,
-    start_diff: 0,
+    y_start: 0,
 };
 const TPIECE: TetrisPieceData = TetrisPieceData {
     data: [[0, 1, 0, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
     color: BlockColor::Blue,
     width: 3,
     height: 3,
-    start_diff: 0,
+    y_start: 0,
 };
 
 const NUM_TETRISPIECES: usize = 7;
@@ -196,10 +196,11 @@ impl TetrisState {
     }
     fn new_piece(&mut self) {
         let rand_val: usize = (rand::random::<u8>() as usize) % NUM_TETRISPIECES;
+        let piece = TETRISPIECES[rand_val];
         self.current = CurrentPiece {
-            piece: TETRISPIECES[rand_val],
-            x: 0,
-            y: 3,
+            piece: piece,
+            x: ((FIELD_WIDTH - piece.width) / 2) as i8,
+            y: piece.y_start,
             rotation: PieceRotation::NORTH,
         }
     }
