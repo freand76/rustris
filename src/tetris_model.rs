@@ -280,17 +280,26 @@ impl TetrisState {
             self.current = piece;
         }
     }
-    pub fn drop(&mut self) {
+    fn drop_one_line(&mut self) -> bool {
         let mut piece = self.current.clone();
-        loop {
-            if self.try_piece(piece) {
-                piece.y += 1;
-            } else {
-                piece.y -= 1;
-                self.place(piece);
-                break;
+        piece.y += 1;
+        if self.try_piece(piece) {
+            self.current = piece;
+            return true;
+        }
+        false
+    }
+    pub fn tick(&mut self) {
+        if !self.game_over {
+            if !self.drop_one_line() {
+                self.place(self.current);
+                self.new_piece();
             }
         }
+    }
+    pub fn drop(&mut self) {
+        while self.drop_one_line() {}
+        self.place(self.current);
         self.new_piece();
     }
     pub fn get_field(&self) -> Playfield {

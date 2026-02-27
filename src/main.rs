@@ -84,9 +84,6 @@ fn game_state_control(key: KeyEvent, tetris_state: &mut TetrisState) -> GameStat
         _ => {}
     }
 
-    if tetris_state.is_game_over() {
-        return GameState::Intro;
-    }
     GameState::Game
 }
 
@@ -178,6 +175,13 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(
                     _ => game_state,
                 }
             }
+        }
+
+        tetris_state.tick();
+
+        if tetris_state.is_game_over() {
+            tetris_state = TetrisState::new(0);
+            game_state = GameState::Intro;
         }
 
         if game_state == GameState::End {
