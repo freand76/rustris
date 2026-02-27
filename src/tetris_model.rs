@@ -174,7 +174,7 @@ impl Playfield {
         }
     }
     fn test_and_remove_rows(&mut self) {
-        for row in 0..self.height() {
+        for row in (0..self.height()).rev() {
             if self.test_row(row) {
                 self.remove_row(row);
             }
@@ -216,14 +216,14 @@ impl Playfield {
 
         true
     }
-    pub fn width(self) -> usize {
+    pub fn width(&self) -> usize {
         FIELD_WIDTH
     }
-    pub fn height(self) -> usize {
+    pub fn height(&self) -> usize {
         FIELD_HEIGHT
     }
-    pub fn get_data(self) -> [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT] {
-        self.data
+    pub fn get_data(&self) -> &[[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT] {
+        &self.data
     }
 }
 
