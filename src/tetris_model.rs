@@ -3,6 +3,9 @@ const FIELD_HEIGHT: usize = 20;
 
 const PIECE_SIDE: usize = 4;
 
+const X: bool = true;
+const O: bool = false;
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum BlockColor {
     Black,
@@ -23,7 +26,7 @@ enum PieceRotation {
     SOUTH,
 }
 
-type PieceGrid = [[u8; PIECE_SIDE]; PIECE_SIDE];
+type PieceGrid = [[bool; PIECE_SIDE]; PIECE_SIDE];
 
 #[derive(Clone, Copy)]
 struct TetrisPieceData {
@@ -51,7 +54,7 @@ impl TetrisPieceData {
             PieceRotation::EAST => self.width,
         };
 
-        rotated_piece.data = [[0; PIECE_SIDE]; PIECE_SIDE];
+        rotated_piece.data = [[O; PIECE_SIDE]; PIECE_SIDE];
 
         for y in 0..self.height {
             for x in 0..self.width {
@@ -75,50 +78,92 @@ impl TetrisPieceData {
     }
 }
 
+#[rustfmt::skip]
 const IPIECE: TetrisPieceData = TetrisPieceData {
-    data: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],
+    data: [
+    [O, O, O, O],
+    [X, X, X, X],
+    [O, O, O, O],
+    [O, O, O, O]
+    ],
     color: BlockColor::Red,
     width: 4,
     height: 3,
     y_start: -1,
 };
+#[rustfmt::skip]
 const LPIECE: TetrisPieceData = TetrisPieceData {
-    data: [[0, 0, 1, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    data: [
+    [O, O, X, O],
+    [X, X, X, O],
+    [O, O, O, O],
+    [O, O, O, O]
+    ],
     color: BlockColor::Yellow,
     width: 3,
     height: 3,
     y_start: 0,
 };
+#[rustfmt::skip]
 const JPIECE: TetrisPieceData = TetrisPieceData {
-    data: [[1, 0, 0, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    data: [
+    [X, O, O, O],
+    [X, X, X, O],
+    [O, O, O, O],
+    [O, O, O, O]
+    ],
     color: BlockColor::Orange,
     width: 3,
     height: 3,
     y_start: 0,
 };
+#[rustfmt::skip]
 const OPIECE: TetrisPieceData = TetrisPieceData {
-    data: [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    data: [
+    [X, X, O, O],
+    [X, X, O, O],
+    [O, O, O, O],
+    [O, O, O, O]
+    ],
     color: BlockColor::Cyan,
     width: 2,
     height: 2,
     y_start: 0,
 };
+#[rustfmt::skip]
 const SPIECE: TetrisPieceData = TetrisPieceData {
-    data: [[0, 1, 1, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    data: [
+    [O, X, X, O],
+    [X, X, O, O],
+    [O, O, O, O],
+    [O, O, O, O]
+    ],
     color: BlockColor::Green,
     width: 3,
     height: 2,
     y_start: 0,
 };
+#[rustfmt::skip]
 const ZPIECE: TetrisPieceData = TetrisPieceData {
-    data: [[1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    data: [
+    [X, X, O, O],
+    [O, X, X, O],
+    [O, O, O, O],
+    [O, O, O, O]
+    ],
     color: BlockColor::Magenta,
     width: 3,
     height: 2,
     y_start: 0,
 };
+#[rustfmt::skip]
 const TPIECE: TetrisPieceData = TetrisPieceData {
-    data: [[0, 1, 0, 0], [1, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    data: [
+    [O, X, O, O],
+    [X, X, X, O],
+    [O, O, O, O],
+    [O, O, O, O]
+    ],
     color: BlockColor::Blue,
     width: 3,
     height: 3,
@@ -148,7 +193,7 @@ impl Playfield {
 
         for y in 0..rotated_piece.height {
             for x in 0..rotated_piece.width {
-                if rotated_piece.data[y][x] == 1 {
+                if rotated_piece.data[y][x] {
                     let grid_x = x as i8 + current.x;
                     let grid_y = y as i8 + current.y;
                     self.data[grid_y as usize][grid_x as usize] = current.piece.color;
@@ -184,7 +229,7 @@ impl Playfield {
         let rotated_piece = piece.piece.get_data(&piece.rotation);
         for y in 0..rotated_piece.height {
             for x in 0..rotated_piece.width {
-                if rotated_piece.data[y][x] == 1 {
+                if rotated_piece.data[y][x] {
                     let grid_x = x as i8 + piece.x;
                     let grid_y = y as i8 + piece.y;
                     self.data[grid_y as usize][grid_x as usize] = rotated_piece.color;
@@ -198,7 +243,7 @@ impl Playfield {
 
         for y in 0..rotated_piece.height {
             for x in 0..rotated_piece.width {
-                if rotated_piece.data[y][x] == 1 {
+                if rotated_piece.data[y][x] {
                     let grid_x = x as i8 + piece.x;
                     let grid_y = y as i8 + piece.y;
                     if grid_x < 0 || grid_x >= self.width() as i8 {
