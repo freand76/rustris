@@ -297,7 +297,6 @@ pub struct TetrisState {
     game_over: bool,
 }
 
-
 impl TetrisState {
     pub fn new(level: u8) -> TetrisState {
         let mut state = TetrisState::default();
