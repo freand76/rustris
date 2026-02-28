@@ -289,6 +289,7 @@ impl Default for Playfield {
     }
 }
 
+#[derive(Default)]
 pub struct TetrisState {
     level: u8,
     field: Playfield,
@@ -296,15 +297,11 @@ pub struct TetrisState {
     game_over: bool,
 }
 
+
 impl TetrisState {
     pub fn new(level: u8) -> TetrisState {
-        let mut state = TetrisState {
-            level,
-            field: Playfield::default(),
-            current: CurrentPiece::default(),
-            game_over: false,
-        };
-        state.new_piece();
+        let mut state = TetrisState::default();
+        state.restart(level);
         state
     }
     pub fn restart(&mut self, level: u8) {
