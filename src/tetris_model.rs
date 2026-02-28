@@ -20,10 +20,10 @@ pub enum BlockColor {
 
 #[derive(Clone, Copy)]
 enum PieceRotation {
-    NORTH,
-    EAST,
-    WEST,
-    SOUTH,
+    North,
+    East,
+    West,
+    South,
 }
 
 type PieceGrid = [[bool; PIECE_SIDE]; PIECE_SIDE];
@@ -38,20 +38,20 @@ struct TetrisPieceData {
 }
 
 impl TetrisPieceData {
-    fn get_data(self, rotation: &PieceRotation) -> TetrisPieceData {
-        let mut rotated_piece = self.clone();
+    fn get_data(&self, rotation: PieceRotation) -> TetrisPieceData {
+        let mut rotated_piece = *self;
 
         rotated_piece.width = match rotation {
-            PieceRotation::NORTH => self.width,
-            PieceRotation::WEST => self.height,
-            PieceRotation::SOUTH => self.width,
-            PieceRotation::EAST => self.height,
+            PieceRotation::North => self.width,
+            PieceRotation::West => self.height,
+            PieceRotation::South => self.width,
+            PieceRotation::East => self.height,
         };
         rotated_piece.height = match rotation {
-            PieceRotation::NORTH => self.height,
-            PieceRotation::WEST => self.width,
-            PieceRotation::SOUTH => self.height,
-            PieceRotation::EAST => self.width,
+            PieceRotation::North => self.height,
+            PieceRotation::West => self.width,
+            PieceRotation::South => self.height,
+            PieceRotation::East => self.width,
         };
 
         rotated_piece.data = [[O; PIECE_SIDE]; PIECE_SIDE];
@@ -59,16 +59,16 @@ impl TetrisPieceData {
         for y in 0..self.height {
             for x in 0..self.width {
                 let grid_y = match rotation {
-                    PieceRotation::NORTH => y as usize,
-                    PieceRotation::WEST => x as usize,
-                    PieceRotation::SOUTH => (self.height - y - 1) as usize,
-                    PieceRotation::EAST => (self.width - x - 1) as usize,
+                    PieceRotation::North => y,
+                    PieceRotation::West => x,
+                    PieceRotation::South => self.height - y - 1,
+                    PieceRotation::East => self.width - x - 1,
                 };
                 let grid_x = match rotation {
-                    PieceRotation::NORTH => x as usize,
-                    PieceRotation::WEST => (self.height - y - 1) as usize,
-                    PieceRotation::SOUTH => (self.width - x - 1) as usize,
-                    PieceRotation::EAST => y as usize,
+                    PieceRotation::North => x,
+                    PieceRotation::West => self.height - y - 1,
+                    PieceRotation::South => self.width - x - 1,
+                    PieceRotation::East => y,
                 };
 
                 rotated_piece.data[grid_y][grid_x] = self.data[y][x];
@@ -170,8 +170,7 @@ const TPIECE: TetrisPieceData = TetrisPieceData {
     y_start: 0,
 };
 
-const NUM_TETRISPIECES: usize = 7;
-const TETRISPIECES: [TetrisPieceData; NUM_TETRISPIECES] =
+const TETRISPIECES: [TetrisPieceData; 7] =
     [IPIECE, LPIECE, JPIECE, OPIECE, SPIECE, ZPIECE, TPIECE];
 
 #[derive(Clone, Copy)]
@@ -182,6 +181,17 @@ struct CurrentPiece<'a> {
     rotation: PieceRotation,
 }
 
+impl<'a> Default for CurrentPiece<'a> {
+    fn default() -> Self {
+        CurrentPiece {
+            piece: &IPIECE,
+            x: 0,
+            y: 0,
+            rotation: PieceRotation::North,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Playfield {
     data: [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT],
@@ -189,7 +199,7 @@ pub struct Playfield {
 
 impl Playfield {
     fn draw(&mut self, current: &CurrentPiece) {
-        let rotated_piece = current.piece.get_data(&current.rotation);
+        let rotated_piece = current.piece.get_data(current.rotation);
 
         for y in 0..rotated_piece.height {
             for x in 0..rotated_piece.width {
@@ -202,31 +212,29 @@ impl Playfield {
         }
     }
     fn test_row(&self, row: usize) -> bool {
-        for x in 0..self.width() {
-            if self.data[row][x] == BlockColor::Black {
-                return false;
-            }
-        }
-        true
+        self.data[row].iter().all(|&color| color != BlockColor::Black)
     }
     fn remove_row(&mut self, row: usize) {
-        if row == 0 {
-            self.data[row] = [BlockColor::Black; FIELD_WIDTH];
-        } else {
-            for y in (0..row).rev() {
-                self.data[y + 1] = self.data[y];
-            }
+        for y in (1..=row).rev() {
+            self.data[y] = self.data[y - 1];
         }
+        self.data[0] = [BlockColor::Black; FIELD_WIDTH];
     }
     fn test_and_remove_rows(&mut self) {
-        for row in (0..self.height()).rev() {
+        let mut row = self.height() - 1;
+        loop {
             if self.test_row(row) {
                 self.remove_row(row);
+            } else {
+                if row == 0 {
+                    break;
+                }
+                row -= 1;
             }
         }
     }
     fn place(&mut self, piece: CurrentPiece) {
-        let rotated_piece = piece.piece.get_data(&piece.rotation);
+        let rotated_piece = piece.piece.get_data(piece.rotation);
         for y in 0..rotated_piece.height {
             for x in 0..rotated_piece.width {
                 if rotated_piece.data[y][x] {
@@ -239,7 +247,7 @@ impl Playfield {
         self.test_and_remove_rows()
     }
     fn try_piece(&self, piece: CurrentPiece) -> bool {
-        let rotated_piece = piece.piece.get_data(&piece.rotation);
+        let rotated_piece = piece.piece.get_data(piece.rotation);
 
         for y in 0..rotated_piece.height {
             for x in 0..rotated_piece.width {
@@ -267,14 +275,16 @@ impl Playfield {
     pub fn height(&self) -> usize {
         FIELD_HEIGHT
     }
-    pub fn get_data(&self) -> &[[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT] {
+    pub fn data(&self) -> &[[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT] {
         &self.data
     }
 }
 
-fn empty_field() -> Playfield {
-    Playfield {
-        data: [[BlockColor::Black; FIELD_WIDTH]; FIELD_HEIGHT],
+impl Default for Playfield {
+    fn default() -> Self {
+        Playfield {
+            data: [[BlockColor::Black; FIELD_WIDTH]; FIELD_HEIGHT],
+        }
     }
 }
 
@@ -288,70 +298,65 @@ pub struct TetrisState {
 impl TetrisState {
     pub fn new(level: u8) -> TetrisState {
         let mut state = TetrisState {
-            level: level,
-            field: empty_field(),
-            current: CurrentPiece {
-                piece: &IPIECE,
-                x: 0,
-                y: 0,
-                rotation: PieceRotation::NORTH,
-            },
+            level,
+            field: Playfield::default(),
+            current: CurrentPiece::default(),
             game_over: false,
         };
         state.new_piece();
         state
     }
     fn new_piece(&mut self) {
-        let rand_val: usize = (rand::random::<u8>() as usize) % NUM_TETRISPIECES;
+        let rand_val: usize = (rand::random::<u8>() as usize) % TETRISPIECES.len();
         let piece = &TETRISPIECES[rand_val];
         self.current = CurrentPiece {
-            piece: piece,
-            x: ((FIELD_WIDTH - piece.width) / 2) as i8,
-            y: piece.y_start,
-            rotation: PieceRotation::NORTH,
-        };
+                piece,
+                x: ((FIELD_WIDTH - piece.width) / 2) as i8,
+                y: piece.y_start,
+                rotation: PieceRotation::North,
+            };
         self.game_over = !self.field.try_piece(self.current);
     }
     pub fn rotate_ccw(&mut self) {
-        let mut piece = self.current.clone();
+        let mut piece = self.current;
         piece.rotation = match self.current.rotation {
-            PieceRotation::NORTH => PieceRotation::WEST,
-            PieceRotation::WEST => PieceRotation::SOUTH,
-            PieceRotation::SOUTH => PieceRotation::EAST,
-            PieceRotation::EAST => PieceRotation::NORTH,
+            PieceRotation::North => PieceRotation::West,
+            PieceRotation::West => PieceRotation::South,
+            PieceRotation::South => PieceRotation::East,
+            PieceRotation::East => PieceRotation::North,
         };
         if self.field.try_piece(piece) {
             self.current = piece;
         }
     }
     pub fn rotate_cw(&mut self) {
-        let mut piece = self.current.clone();
+        let mut piece = self.current;
         piece.rotation = match self.current.rotation {
-            PieceRotation::NORTH => PieceRotation::EAST,
-            PieceRotation::EAST => PieceRotation::SOUTH,
-            PieceRotation::SOUTH => PieceRotation::WEST,
-            PieceRotation::WEST => PieceRotation::NORTH,
+            PieceRotation::North => PieceRotation::East,
+            PieceRotation::East => PieceRotation::South,
+            PieceRotation::South => PieceRotation::West,
+            PieceRotation::West => PieceRotation::North,
         };
         if self.field.try_piece(piece) {
             self.current = piece;
         }
     }
     pub fn move_left(&mut self) {
-        let mut piece = self.current.clone();
+        let mut piece = self.current;
         piece.x -= 1;
         if self.field.try_piece(piece) {
             self.current = piece;
         }
     }
     pub fn move_right(&mut self) {
-        let mut piece = self.current.clone();
+        let mut piece = self.current;
         piece.x += 1;
         if self.field.try_piece(piece) {
             self.current = piece;
         }
     }
     fn drop_one_line(&mut self) -> bool {
-        let mut piece = self.current.clone();
+        let mut piece = self.current;
         piece.y += 1;
         if self.field.try_piece(piece) {
             self.current = piece;
@@ -370,15 +375,15 @@ impl TetrisState {
         self.field.place(self.current);
         self.new_piece();
     }
-    pub fn get_field(&self) -> Playfield {
-        let mut field = self.field.clone();
+    pub fn field(&self) -> Playfield {
+        let mut field = self.field;
         field.draw(&self.current);
-        return field;
+        field
     }
-    pub fn get_level(&self) -> u8 {
-        return self.level;
+    pub fn level(&self) -> u8 {
+        self.level
     }
     pub fn is_game_over(&self) -> bool {
-        return self.game_over;
+        self.game_over
     }
 }

@@ -52,11 +52,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn intro_state_control(key: KeyEvent) -> GameState {
     // Input handling
-    return match key.code {
+    match key.code {
         KeyCode::Char(' ') => GameState::Game,
         KeyCode::Char('q') => GameState::End,
         _ => GameState::Intro,
-    };
+    }
 }
 
 fn game_state_control(key: KeyEvent, tetris_state: &mut TetrisState) -> GameState {
@@ -126,21 +126,21 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
         .block(block);
 
     f.render_widget(paragraph, area);
-    let field = tetris_state.get_field();
-    let data = field.get_data();
+    let field = tetris_state.field();
+    let data = field.data();
 
-    for y in 0..field.height() {
-        for x in 0..field.width() {
+    for (y, row) in data.iter().enumerate().take(field.height()) {
+        for (x, &color) in row.iter().enumerate().take(field.width()) {
             let cell_x = area.x + 1 + 2 * x as u16;
             let cell_y = area.y + 1 + y as u16;
 
             let cell =
-                Paragraph::new("██").style(Style::default().fg(from_block_color(data[y][x])));
+                Paragraph::new("██").style(Style::default().fg(from_block_color(color)));
             f.render_widget(cell, Rect::new(cell_x, cell_y, 2, 1));
         }
     }
 
-    let level = tetris_state.get_level();
+    let level = tetris_state.level();
     let paragraph = Paragraph::new(format!("{}", level)).style(Style::default().fg(Color::Cyan));
 
     f.render_widget(paragraph, Rect::new(0, 22, 10, 1));
