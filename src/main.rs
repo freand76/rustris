@@ -50,10 +50,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn intro_state_control(key: KeyEvent) -> GameState {
+fn intro_state_control(key: KeyEvent, tetris_state: &mut TetrisState) -> GameState {
     // Input handling
     match key.code {
-        KeyCode::Char(' ') => GameState::Game,
+        KeyCode::Char(' ') => {
+            tetris_state.restart(0);
+            GameState::Game
+        }
         KeyCode::Char('q') => GameState::End,
         _ => GameState::Intro,
     }
@@ -134,8 +137,7 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
             let cell_x = area.x + 1 + 2 * x as u16;
             let cell_y = area.y + 1 + y as u16;
 
-            let cell =
-                Paragraph::new("██").style(Style::default().fg(from_block_color(color)));
+            let cell = Paragraph::new("██").style(Style::default().fg(from_block_color(color)));
             f.render_widget(cell, Rect::new(cell_x, cell_y, 2, 1));
         }
     }
@@ -170,18 +172,19 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(
         if event::poll(Duration::from_millis(200))? {
             if let Event::Key(key) = event::read()? {
                 game_state = match game_state {
-                    GameState::Intro => intro_state_control(key),
+                    GameState::Intro => intro_state_control(key, &mut tetris_state),
                     GameState::Game => game_state_control(key, &mut tetris_state),
                     _ => game_state,
                 }
             }
         }
 
-        tetris_state.tick();
+        if game_state == GameState::Game {
+            tetris_state.tick();
 
-        if tetris_state.is_game_over() {
-            tetris_state = TetrisState::new(0);
-            game_state = GameState::Intro;
+            if tetris_state.is_game_over() {
+                game_state = GameState::Intro;
+            }
         }
 
         if game_state == GameState::End {

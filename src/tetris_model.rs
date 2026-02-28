@@ -170,8 +170,7 @@ const TPIECE: TetrisPieceData = TetrisPieceData {
     y_start: 0,
 };
 
-const TETRISPIECES: [TetrisPieceData; 7] =
-    [IPIECE, LPIECE, JPIECE, OPIECE, SPIECE, ZPIECE, TPIECE];
+const TETRISPIECES: [TetrisPieceData; 7] = [IPIECE, LPIECE, JPIECE, OPIECE, SPIECE, ZPIECE, TPIECE];
 
 #[derive(Clone, Copy)]
 struct CurrentPiece<'a> {
@@ -212,7 +211,9 @@ impl Playfield {
         }
     }
     fn test_row(&self, row: usize) -> bool {
-        self.data[row].iter().all(|&color| color != BlockColor::Black)
+        self.data[row]
+            .iter()
+            .all(|&color| color != BlockColor::Black)
     }
     fn remove_row(&mut self, row: usize) {
         for y in (1..=row).rev() {
@@ -306,15 +307,21 @@ impl TetrisState {
         state.new_piece();
         state
     }
+    pub fn restart(&mut self, level: u8) {
+        self.game_over = false;
+        self.level = level;
+        self.field = Playfield::default();
+        self.new_piece();
+    }
     fn new_piece(&mut self) {
         let rand_val: usize = (rand::random::<u8>() as usize) % TETRISPIECES.len();
         let piece = &TETRISPIECES[rand_val];
         self.current = CurrentPiece {
-                piece,
-                x: ((FIELD_WIDTH - piece.width) / 2) as i8,
-                y: piece.y_start,
-                rotation: PieceRotation::North,
-            };
+            piece,
+            x: ((FIELD_WIDTH - piece.width) / 2) as i8,
+            y: piece.y_start,
+            rotation: PieceRotation::North,
+        };
         self.game_over = !self.field.try_piece(self.current);
     }
     pub fn rotate_ccw(&mut self) {
