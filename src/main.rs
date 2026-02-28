@@ -11,11 +11,16 @@ use ratatui::{
     backend::CrosstermBackend,
     prelude::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
 };
 
-use tetris_model::{BlockColor, TetrisState};
+use tetris_model::{BlockColor, Playfield, TetrisState};
+
+const FRAME_WIDTH: u16 = 80;
+const FRAME_HEIGHT: u16 = 24;
+const BOARD_HEIGHT: u16 = Playfield::height() as u16 + 2; // playfield rows + 2 for borders
 
 #[derive(PartialEq)]
 enum GameState {
@@ -148,47 +153,51 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
         ])
         .split(area);
 
-    // Let's also split the board height so it's 20x20. The inner area height is 34 - 2 = 32.
-    // 32 - 22 (20 height + 2 borders) = 10 remaining = 5 top and 5 bottom.
+    // Vertical padding to center the 22-tall board in the inner area
+    // Inner height = FRAME_HEIGHT - 2 (outer borders)
+    let inner_height = FRAME_HEIGHT - 2;
+    let board_v_pad = (inner_height - BOARD_HEIGHT) / 2;
+
     let board_v_chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
-            ratatui::layout::Constraint::Length(5),
-            ratatui::layout::Constraint::Length(22),
+            ratatui::layout::Constraint::Length(board_v_pad),
+            ratatui::layout::Constraint::Length(BOARD_HEIGHT),
             ratatui::layout::Constraint::Min(0),
         ])
         .split(h_chunks[1]);
 
     let board_area = board_v_chunks[1];
 
-    // Inside the right panel, split it vertically into the Scoreboard and Next Piece (8x4).
+    // Inside the right panel, center scoreboard and next piece vertically.
     let right_panel_chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
-            ratatui::layout::Constraint::Length(5), // Match top padding
-            ratatui::layout::Constraint::Length(6), // Scoreboard height
-            ratatui::layout::Constraint::Length(6), // Next piece height (4 + 2 for borders)
-            ratatui::layout::Constraint::Min(0),    // Bottom padding
+            ratatui::layout::Constraint::Length(board_v_pad), // Match board top padding
+            ratatui::layout::Constraint::Length(6),           // Scoreboard height
+            ratatui::layout::Constraint::Length(1),           // Gap
+            ratatui::layout::Constraint::Length(6),           // Next piece height
+            ratatui::layout::Constraint::Min(0),              // Bottom flex
         ])
         .split(h_chunks[2]);
 
     let score_area = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Horizontal)
         .constraints([
-            ratatui::layout::Constraint::Length(2),  // tiny spacer
-            ratatui::layout::Constraint::Length(18), // score box width
-            ratatui::layout::Constraint::Min(0),
+            ratatui::layout::Constraint::Min(0),     // Left flex
+            ratatui::layout::Constraint::Length(18),  // score box width
+            ratatui::layout::Constraint::Min(0),     // Right flex
         ])
         .split(right_panel_chunks[1])[1];
 
     let next_piece_area = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Horizontal)
         .constraints([
-            ratatui::layout::Constraint::Length(2),  // tiny spacer
-            ratatui::layout::Constraint::Length(18), // Next piece box width (expanded)
-            ratatui::layout::Constraint::Min(0),
+            ratatui::layout::Constraint::Min(0),     // Left flex
+            ratatui::layout::Constraint::Length(18),  // Next piece box width
+            ratatui::layout::Constraint::Min(0),     // Right flex
         ])
-        .split(right_panel_chunks[2])[1];
+        .split(right_panel_chunks[3])[1];
 
     let block = Block::default().borders(Borders::ALL);
     let paragraph = Paragraph::new("").block(block);
@@ -198,8 +207,8 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
     let data = field.data();
 
     // Now draw the actual cells inside the board_area offset
-    for (y, row) in data.iter().enumerate().take(field.height()) {
-        for (x, &color) in row.iter().enumerate().take(field.width()) {
+    for (y, row) in data.iter().enumerate().take(Playfield::height()) {
+        for (x, &color) in row.iter().enumerate().take(Playfield::width()) {
             let cell_x = board_area.x + 1 + 2 * x as u16;
             let cell_y = board_area.y + 1 + y as u16;
 
@@ -211,6 +220,60 @@ fn game_field(f: &mut Frame, area: Rect, tetris_state: &TetrisState) {
     // Finally render the scoreboard and next piece
     f.render_widget(score_paragraph, score_area);
     f.render_widget(next_piece_paragraph, next_piece_area);
+
+    // ASCII Rustris logo in the left panel — each letter colored from the Tetris palette
+    // Letter definitions: 4 rows each, 3 chars wide
+    let letter_data: [([&str; 4], Color); 7] = [
+        (["█▀▄", "██▀", "█ █", "▀ ▀"], Color::Red),       // R
+        (["█ █", "█ █", "█ █", "▀█▀"], Color::Cyan),      // U
+        (["▄█▀", "▀█▄", "▄▄█", "▀▀ "], Color::Yellow),    // S
+        (["▀█▀", " █ ", " █ ", " ▀ "], Color::Green),     // T
+        (["█▀▄", "██▀", "█ █", "▀ ▀"], Color::Magenta),   // R
+        ([" █ ", " █ ", " █ ", " ▀ "], Color::Blue),      // I
+        (["▄█▀", "▀█▄", "▄▄█", "▀▀ "], Color::LightRed),  // S
+    ];
+
+    let mut logo_lines: Vec<Line> = Vec::new();
+    for row in 0..4 {
+        let mut spans: Vec<Span> = Vec::new();
+        for (i, (rows, color)) in letter_data.iter().enumerate() {
+            spans.push(Span::styled(
+                rows[row],
+                Style::default().fg(*color),
+            ));
+            if i < 6 {
+                spans.push(Span::raw(" "));
+            }
+        }
+        logo_lines.push(Line::from(spans));
+    }
+
+    let logo_block = Block::default()
+        .borders(Borders::ALL)
+        .style(Style::default().bg(Color::DarkGray));
+    let logo_paragraph = Paragraph::new(logo_lines)
+        .block(logo_block)
+        .alignment(ratatui::layout::Alignment::Center);
+
+    let logo_v_chunks = ratatui::layout::Layout::default()
+        .direction(ratatui::layout::Direction::Vertical)
+        .constraints([
+            ratatui::layout::Constraint::Length(0),
+            ratatui::layout::Constraint::Length(6),
+            ratatui::layout::Constraint::Min(0),
+        ])
+        .split(h_chunks[0]);
+
+    let logo_h_chunks = ratatui::layout::Layout::default()
+        .direction(ratatui::layout::Direction::Horizontal)
+        .constraints([
+            ratatui::layout::Constraint::Length(0),
+            ratatui::layout::Constraint::Length(29),
+            ratatui::layout::Constraint::Min(0),
+        ])
+        .split(logo_v_chunks[1]);
+
+    f.render_widget(logo_paragraph, logo_h_chunks[1]);
 }
 
 fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>> {
@@ -223,10 +286,13 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(
             let size = f.size();
 
             // Check if terminal is too small
-            if size.width < 80 || size.height < 34 {
-                let warning = Paragraph::new("Terminal too small!\nRequires at least 80x34.")
-                    .style(Style::default().fg(Color::Red))
-                    .alignment(ratatui::layout::Alignment::Center);
+            if size.width < FRAME_WIDTH || size.height < FRAME_HEIGHT {
+                let warning = Paragraph::new(format!(
+                    "Terminal too small!\nRequires at least {}x{}.",
+                    FRAME_WIDTH, FRAME_HEIGHT
+                ))
+                .style(Style::default().fg(Color::Red))
+                .alignment(ratatui::layout::Alignment::Center);
                 f.render_widget(warning, size);
                 return;
             }
@@ -235,9 +301,9 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(
             let h_chunks = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([
-                    Constraint::Min(0),     // Left flex
-                    Constraint::Length(80), // Total wrapper width
-                    Constraint::Min(0),     // Right flex
+                    Constraint::Min(0),              // Left flex
+                    Constraint::Length(FRAME_WIDTH),  // Total wrapper width
+                    Constraint::Min(0),              // Right flex
                 ])
                 .split(size);
 
@@ -245,13 +311,13 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> Result<(
             let v_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Min(0),     // Top flex
-                    Constraint::Length(34), // Total wrapper height
-                    Constraint::Min(0),     // Bottom flex
+                    Constraint::Min(0),               // Top flex
+                    Constraint::Length(FRAME_HEIGHT),  // Total wrapper height
+                    Constraint::Min(0),               // Bottom flex
                 ])
                 .split(h_chunks[1]);
 
-            let outer_frame = Block::default().borders(Borders::ALL).title("Rustris");
+            let outer_frame = Block::default().borders(Borders::ALL);
             f.render_widget(outer_frame, v_chunks[1]);
 
             let inner_area = v_chunks[1].inner(&ratatui::layout::Margin {

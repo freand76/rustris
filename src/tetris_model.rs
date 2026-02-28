@@ -222,7 +222,7 @@ impl Playfield {
         self.data[0] = [BlockColor::Black; FIELD_WIDTH];
     }
     fn test_and_remove_rows(&mut self) {
-        let mut row = self.height() - 1;
+        let mut row = Playfield::height() - 1;
         loop {
             if self.test_row(row) {
                 self.remove_row(row);
@@ -255,10 +255,10 @@ impl Playfield {
                 if rotated_piece.data[y][x] {
                     let grid_x = x as i8 + piece.x;
                     let grid_y = y as i8 + piece.y;
-                    if grid_x < 0 || grid_x >= self.width() as i8 {
+                    if grid_x < 0 || grid_x >= Playfield::width() as i8 {
                         return false;
                     }
-                    if grid_y < 0 || grid_y >= self.height() as i8 {
+                    if grid_y < 0 || grid_y >= Playfield::height() as i8 {
                         return false;
                     }
                     if self.data[grid_y as usize][grid_x as usize] != BlockColor::Black {
@@ -270,10 +270,10 @@ impl Playfield {
 
         true
     }
-    pub fn width(&self) -> usize {
+    pub const fn width() -> usize {
         FIELD_WIDTH
     }
-    pub fn height(&self) -> usize {
+    pub const fn height() -> usize {
         FIELD_HEIGHT
     }
     pub fn data(&self) -> &[[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT] {
